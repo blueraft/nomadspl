@@ -1,29 +1,47 @@
 name: main
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
+on: [push]
 jobs:
-  test:
+  install-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', 'pypy-3.8']
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install tox
-        run: pip install tox
-
-      - name: Test
-        run: tox -e py
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install '.[dev]' --index-url https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple
+        pip install coverage coveralls
+    - name: Test with pytest
+      run: |
+        python -m coverage run -m pytest -sv
+    - name: Submit to coveralls
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        coveralls --service=github
+    - name: Test with nomad
+      run: |
+        python -m nomad.cli parse tests/data/test.archive.yaml
+  build-and-install:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Build the package
+      run: |
+        pip install --upgrade pip
+        pip install build
+        python -m build --sdist
+    - name: Install the package
+      run: |
+        pip install dist/*.tar.gz --index-url https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple
+    - name: Test with nomad
+      run: |
+        python -m nomad.cli parse tests/data/test.archive.yaml
