@@ -15,7 +15,7 @@ class ExampleSection(EntryData):
         super().normalize(archive, logger)
         logger.info('ExampleSection.normalize called')
 
-        self.message = f'Hello {self.name}!'
+        self.message = f'Hello - {self.name}!'
 
 
 m_package.__init_metainfo__()
